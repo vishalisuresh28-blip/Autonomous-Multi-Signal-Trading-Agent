@@ -1,212 +1,215 @@
-# \# 🤖 Autonomous Multi-Signal Trading Agent
+# 🤖 Autonomous Multi-Signal Trading Agent
 
-# 
+An end-to-end agentic AI trading system that combines financial data, news sentiment, and machine learning models to generate Buy / Sell / Hold decisions with confidence scores and full reasoning transparency.
 
-# An end-to-end \*\*agentic AI trading system\*\* that integrates market data, NLP-based sentiment analysis, and machine learning models to generate \*\*Buy / Sell / Hold decisions\*\* with confidence scores.
+---
 
-# 
+## Overview
 
-# \---
+This project implements an autonomous trading agent using a structured decision-making loop:
 
-# 
+Observe → Plan → Execute → Reflect → Decide → Act
 
-# \## 🚀 Overview
+Instead of relying on a single model, the system combines multiple independent signals (market data, sentiment, ML forecasts) and intelligently fuses them into a final decision.
 
-# 
+---
 
-# This project implements an \*\*autonomous trading agent\*\* following a structured decision loop:
+## How the System Works (Step-by-Step)
 
-# 
+### 1. Observe (Data Collection)
 
-# > \*\*Observe → Plan → Execute → Reflect → Decide → Act\*\*
+The agent first gathers all required inputs:
 
-# 
+- **Stock Price Data**
+  - Fetches up to 5 years of historical data
+  - Uses a 3-layer fallback system to avoid failures:
+    - Direct Yahoo Finance API (fastest and most reliable)
+    - yfinance Ticker API
+    - yfinance download (backup)
 
-# The agent combines:
+- **Technical Indicators Computed**
+  - SMA (20-day moving average)
+  - EMA (20-day exponential moving average)
+  - RSI (momentum indicator)
+  - Daily returns
 
-# \- 📊 Technical indicators
+- **News Data**
+  - Fetches latest headlines using Google News RSS
+  - Extracts top 10 relevant articles
 
-# \- 📰 News sentiment (FinBERT + VADER + TextBlob)
+---
 
-# \- 🤖 Machine learning models (Random Forest, LSTM)
+### 2. Plan (Strategy Selection)
 
-# 
+The agent decides which models to run based on available data:
 
-# to produce \*\*explainable and adaptive trading decisions\*\*.
+- Random Forest → always used  
+- LSTM → only used if sufficient data (>= 200 rows)  
 
-# 
+This avoids unnecessary computation and prevents unreliable predictions.
 
-# \---
+---
 
-# 
+### 3. Execute (Model Processing)
 
-# \## 🧠 Key Features
+#### 🔹 Sentiment Analysis
 
-# 
+Each news headline is analyzed using:
 
-# \### 🔹 Agentic Decision System
+- **FinBERT (primary model)**
+  - Specialized for financial text
+  - Outputs positive / negative / neutral scores
 
-# \- Multi-step reasoning loop
+- **Fallback: VADER + TextBlob**
+  - Used if FinBERT fails
+  - Ensures robustness
 
-# \- Dynamic signal aggregation
+- **Score Blending**
+  - Final sentiment = weighted combination of models
 
-# \- Conflict detection and resolution
+- **Output**
+  - Sentiment score (continuous)
+  - Sentiment label (Bullish / Bearish / Neutral)
+  - Signal (+1 / 0 / -1)
 
-# \- Confidence scoring mechanism
+---
 
-# 
+#### 🔹 News Summarization
 
-# \---
+- Uses BART model to generate a short summary of all headlines
+- Helps interpret overall market sentiment quickly
 
-# 
+---
 
-# \### 🔹 Robust Data Pipeline
+#### 🔹 Random Forest Model
 
-# \- 3-tier fallback system for stock data:
+- Input features:
+  - SMA, EMA, RSI, Returns
 
-# &#x20; 1. Yahoo Finance API (direct HTTP)
+- What it does:
+  - Learns relationships between indicators and price
+  - Predicts next price
 
-# &#x20; 2. yfinance Ticker API
+- Output:
+  - Forecasted price
+  - R² score (model accuracy)
+  - MAE (error)
+  - Trading signal (+1 / 0 / -1)
 
-# &#x20; 3. yfinance download fallback
+---
 
-# \- Handles rate limits using:
+#### 🔹 LSTM Model
 
-# &#x20; - Session headers
+- Deep learning model for time-series prediction
 
-# &#x20; - Optional caching (`requests\_cache`)
+- What it does:
+  - Learns sequential price patterns
+  - Uses last 60 days to predict next value
 
-# &#x20; - Streamlit caching (1-hour TTL)
+- Output:
+  - Forecasted price
+  - R² score
+  - MAE
+  - Trading signal
 
-# 
+- Note:
+  - Skipped if data is insufficient
 
-# \---
+---
 
-# 
+### 4. Reflect (Conflict Detection)
 
-# \### 🔹 Sentiment Analysis (NLP)
+The agent checks if signals disagree:
 
-# \- \*\*FinBERT\*\* (primary financial sentiment model)
+Example:
+- Sentiment → BUY  
+- RF → SELL  
+- LSTM → HOLD  
 
-# \- \*\*VADER + TextBlob\*\* (fallback)
+If conflict is detected:
+- The outlier signal is identified
+- Its weight is reduced by 50%
+- Remaining weight is redistributed
 
-# \- \*\*BART\*\* for news summarization
+This improves decision stability.
 
-# \- Weighted sentiment blending for robustness
+---
 
-# 
+### 5. Decide (Final Decision Logic)
 
-# \---
+The agent combines all signals using weighted scoring:
 
-# 
+- Each signal contributes:
+  - Sentiment (default 30%)
+  - Random Forest (35%)
+  - LSTM (35%)
 
-# \### 🔹 Machine Learning Models
+- Decision rules:
+  - Strong agreement → BUY / SELL
+  - Weak signals → HOLD
+  - Confidence score calculated from signal strength
 
-# \- \*\*Random Forest\*\*
+---
 
-# &#x20; - Uses technical indicators: SMA, EMA, RSI, Returns
+### 6. Act (Output)
 
-# \- \*\*LSTM Neural Network\*\*
+The agent outputs:
 
-# &#x20; - Time-series forecasting with sequence learning
+- Final decision (BUY / SELL / HOLD)
+- Confidence score (%)
+- Individual model signals
+- Full reasoning trace (step-by-step logs)
 
-# \- Performance metrics:
+---
 
-# &#x20; - R² Score
+## Backtesting Engine
 
-# &#x20; - MAE (Mean Absolute Error)
+The system includes a simulation module to evaluate performance:
 
-# 
+- Simulates trading using model predictions
+- Executes buy/sell decisions over time
+- Tracks:
+  - Portfolio value
+  - Number of trades
+  - Returns (%)
+  - Comparison with Buy & Hold strategy
+  - Alpha (excess return)
 
-# \---
+---
 
-# 
+## Key Features Explained
 
-# \### 🔹 Intelligent Signal Fusion
+### Agentic Design
+Unlike traditional models, this system:
+- Makes decisions in multiple steps
+- Adapts to conflicting information
+- Explains its reasoning
 
-# \- Converts model outputs into signals:
+---
 
-# &#x20; - +1 → BUY
+### Robust Data Handling
+- Avoids API failures using fallback layers
+- Handles rate limits using caching and session headers
 
-# &#x20; - 0 → HOLD
+---
 
-# &#x20; - -1 → SELL
+### Explainability
+- Every decision is logged
+- Users can see:
+  - Why a decision was made
+  - Which model influenced it
 
-# \- Detects \*\*conflicting signals\*\*
+---
 
-# \- Dynamically adjusts weights to reduce noise
+### Multi-Model Intelligence
+- Combines:
+  - NLP (sentiment)
+  - ML (Random Forest)
+  - Deep Learning (LSTM)
 
-# 
+---
 
-# \---
+## Installation
 
-# 
-
-# \### 🔹 Explainability (Core Highlight)
-
-# \- Full \*\*chain-of-thought reasoning log\*\*
-
-# \- Transparent:
-
-# &#x20; - Model outputs
-
-# &#x20; - Signal votes
-
-# &#x20; - Final decision logic
-
-# 
-
-# \---
-
-# 
-
-# \### 🔹 Backtesting Engine
-
-# \- Simulates trading strategy over historical data
-
-# \- Compares against \*\*Buy \& Hold benchmark\*\*
-
-# \- Outputs:
-
-# &#x20; - Portfolio value
-
-# &#x20; - Returns
-
-# &#x20; - Trade history
-
-# &#x20; - Alpha
-
-# 
-
-# \---
-
-# 
-
-# \### 🔹 Interactive Dashboard
-
-# Built using \*\*Streamlit\*\*:
-
-# \- Company search (no ticker needed)
-
-# \- Live agent execution
-
-# \- Visualizations:
-
-# &#x20; - Price charts
-
-# &#x20; - Sentiment analysis
-
-# &#x20; - Signal breakdown
-
-# &#x20; - Backtest results
-
-# 
-
-# \---
-
-# 
-
-# 
-
-
-
+```bash
+pip install -r requirements.txt
